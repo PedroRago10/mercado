@@ -1,0 +1,10 @@
+{
+  "menu": [
+    {
+      "name": "Busca Rápida",
+      "icon": "menu-icon tf-icons bx bx-rocket",
+      "slug": "cards-basic",
+      "url": "/busca-rapida"
+    }
+  ]
+}
