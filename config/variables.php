@@ -3,7 +3,7 @@
   return [
     "creatorName" => "ThemeSelection",
     "creatorUrl" => "https://themeselection.com",
-    "templateName" => "Mercados",
+    "templateName" => "SuperTudo",
     "templateDescription" => "",
     "templateKeyword" => "",
     "licenseUrl" => "https://themeselection.com/license/",

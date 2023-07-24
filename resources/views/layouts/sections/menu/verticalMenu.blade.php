@@ -17,6 +17,19 @@
   <div class="menu-inner-shadow"></div>
 
   <ul class="menu-inner py-1">
+    @if(Auth::user())
+    <li>
+    <a class="dropdown-item btn btn-secondary" href="{{ route('logout') }}"
+      onclick="event.preventDefault();
+      document.getElementById('logout-form').submit();">
+      Encerrar Sessão
+    </a>
+    
+    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+    @csrf
+    </form>
+    </li>
+    @endif
     @foreach ($menuData[0]->menu as $menu)
 
     {{-- adding active and open class if child is active --}}

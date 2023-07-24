@@ -22,6 +22,10 @@ Route::get('/test-connection', function () {
         return "Erro na conexão com o banco de dados: " . $e->getMessage();
     }
 });
+
+
+Auth::routes();
+
 // Main Page Route
 Route::get('/', $controller_path . '\busca\BuscaRapida@index')->name('busca-rapida');
 

@@ -19,6 +19,17 @@ use Psr\Http\Message\ResponseInterface;
 
 class BuscaRapida extends Controller
 {
+        /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    
     public function index()
     {
         $type = isset($_GET['type']) ? $_GET['type'] : 0;
