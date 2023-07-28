@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +19,11 @@ $controller_path = 'App\Http\Controllers';
 Route::get('/test-connection', function () {
     try {
         DB::connection()->getPdo();
+        $tabelas = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+
+    foreach ($tabelas as $tabela) {
+        echo $tabela->table_name . '--------'. PHP_EOL;
+    }
         return "Conexão com o banco de dados PostgreSQL bem-sucedida!";
     } catch (Exception $e) {
         return "Erro na conexão com o banco de dados: " . $e->getMessage();
@@ -33,6 +40,8 @@ Route::get('/', $controller_path . '\busca\BuscaRapida@index')->name('busca-rapi
 Route::get("/busca-rapida", $controller_path . '\busca\BuscaRapida@index')->name('busca-rapida');
 Route::post("/get/busca-rapida", $controller_path . '\busca\BuscaRapida@busca')->name('get-busca-rapida');
 Route::get("/get/ajax/busca-rapida", $controller_path . '\busca\BuscaRapida@buscaAjax')->name('get-busca-rapida');
+Route::post("/send/products/ajax", $controller_path . '\busca\BuscaRapida@save');
+
 
 // layout
 Route::get('/layouts/without-menu', $controller_path . '\layouts\WithoutMenu@index')->name('layouts-without-menu');

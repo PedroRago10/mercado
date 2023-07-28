@@ -100,123 +100,17 @@ class BuscaRapida extends Controller
        
         return view('content.busca.result')->with(["resultado" => $result, "site" => $site, 'type' => $type, 'options' => $options, 'current_site' => $current_site]);
     }
-    public function buscaAjax()
+
+    public function save()
     {
-        // https://api.tendaatacado.com.br/api/public/store/category/12/products?query=%7B"link":"mercearia"%7D&page=1
-        // query: {"link":"mercearia"}
-        // page: 1
-        // order: relevance
-        // save: true
-        // cartId: 7413956
-        // current_page
-        // : 
-        // 1
-        // products
-        // : 
-        // [,…]
-        // products_per_page
-        // : 
-        // 20
-        // searchId
-        // : 
-        // "a417a72f-a633-49a9-b701-c1168daa2bbf"
-        // total_pages
-        // : 
-        // 152
-        // total_products
-        // : 
-        // 3029
-
-        $obj =' {
-            "draw": 1,
-            "recordsTotal": 57,
-            "recordsFiltered": 57,
-            "data": [
-              [
-                "Airi",
-                "Satou",
-                "Accountant",
-                "Tokyo",
-                "28th Nov 08",
-                "$162,700"
-              ],
-              [
-                "Angelica",
-                "Ramos",
-                "Chief Executive Officer (CEO)",
-                "London",
-                "9th Oct 09",
-                "$1,200,000"
-              ],
-              [
-                "Ashton",
-                "Cox",
-                "Junior Technical Author",
-                "San Francisco",
-                "12th Jan 09",
-                "$86,000"
-              ],
-              [
-                "Bradley",
-                "Greer",
-                "Software Engineer",
-                "London",
-                "13th Oct 12",
-                "$132,000"
-              ],
-              [
-                "Brenden",
-                "Wagner",
-                "Software Engineer",
-                "San Francisco",
-                "7th Jun 11",
-                "$206,850"
-              ],
-              [
-                "Brielle",
-                "Williamson",
-                "Integration Specialist",
-                "New York",
-                "2nd Dec 12",
-                "$372,000"
-              ],
-              [
-                "Bruno",
-                "Nash",
-                "Software Engineer",
-                "London",
-                "3rd May 11",
-                "$163,500"
-              ],
-              [
-                "Caesar",
-                "Vance",
-                "Pre-Sales Support",
-                "New York",
-                "12th Dec 11",
-                "$106,450"
-              ],
-              [
-                "Cara",
-                "Stevens",
-                "Sales Assistant",
-                "New York",
-                "6th Dec 11",
-                "$145,600"
-              ],
-              [
-                "Cedric",
-                "Kelly",
-                "Senior Javascript Developer",
-                "Edinburgh",
-                "29th Mar 12",
-                "$433,060"
-              ]
-            ]
-          }';
-        return $obj; 
+        $data = $_POST['data'];
+        // Percorrer o array e fazer as operações de inserção/atualização nas tabelas
+        foreach ($data as $item) {
+            $productId = self::insertOrUpdateProduct($item);
+            self::insertOrUpdateProductComplement($productId, $item['price']);
+        }
+        return true;
     }
-
     
     public function scraping($urls) {
         if($this->options['buscarPaginaInicial'] && $urls[0] != $this->siteDefault) {
@@ -269,12 +163,25 @@ class BuscaRapida extends Controller
                         $precoAnterior = $node->filter('.unit_price')->count() > 0 ? $node->filter('.unit_price')->text() : '';
                     }
                     
+                    $exists = false;
+                    $existingProduct = DB::table('public.produto')->where('descricaocompleta', $nome)->first();
+                 
+                    if($existingProduct) {
+                        $existingProductValue = DB::table('public.produtocomplemento')->where('id_produto', $existingProduct->id)->first();
+                        if(floatval($existingProductValue->precovenda) == self::parsePrice($preco)) {
+                            $exists = 'table-primary';
+                        }else{
+                            $exists = 'table-warning';
+                        }
+                    }
+
                     return [
                         'nome'          => $nome,
                         'preco'         => $preco,
                         'precoAnterior' => $precoAnterior,
                         'link'          => $link,
-                        'desconto'      => $desconto
+                        'desconto'      => $desconto,
+                        'exists'        => $exists
                     ];
                 });
 
@@ -357,6 +264,24 @@ class BuscaRapida extends Controller
                 $results[$key]['category']  = $array['category'];
                 $results[$key]['totalPaginas'] = $i;
                 $results[$key]['cep'] = $cep;
+
+                foreach($array['results'] as $ckey => &$resultValue) {
+                    $exists = false;
+                    $existingProduct = DB::table('public.produto')->where('descricaocompleta', $resultValue['name'])->first();
+                 
+                    if($existingProduct) {
+                        $existingProductValue = DB::table('public.produtocomplemento')->where('id_produto', $existingProduct->id)->first();
+                        if(floatval($existingProductValue->precovenda) == self::parsePrice($resultValue['providers'][0]['prices'][0]['price'])) {
+                            $exists = 'table-primary';
+                        }else{
+                            $exists = 'table-warning';
+                        }
+                    }
+                    $resultValue['exists'] = $exists;
+
+                }
+                unset($resultValue);
+                
                 if (is_array($array['results'])) {
                     array_push($results[$key]['results'], ...$array['results']); // Use operador de spread para adicionar elementos individuais
                 } else {
@@ -413,6 +338,16 @@ class BuscaRapida extends Controller
                 foreach ($array['products'] as &$product) {
                     unset($product['lojaConfigTO']);
                     unset($product['inventory']);
+                    $product['exists'] = false;
+                    $existingProduct = DB::table('public.produto')->where('descricaocompleta', $product['name'])->first();
+                    if($existingProduct) {
+                        $existingProductValue = DB::table('public.produtocomplemento')->where('id_produto', $existingProduct->id)->first();
+                        if(floatval($existingProductValue->precovenda) == $product['price']) {
+                            $product['exists'] = 'table-primary';
+                        }else{
+                            $product['exists'] = 'table-warning';
+                        }
+                    }
                 }
                 unset($product); // Desvincular a referência para evitar problemas posteriores
     
@@ -440,4 +375,181 @@ class BuscaRapida extends Controller
 
         return $results;
     }
+
+    // Função para inserir ou atualizar um produto na tabela "produtos"
+    function insertOrUpdateProduct($product)
+    {
+        $name = $product['name'];
+        $price = $product['price'];
+
+        // Verificar se o produto já existe na tabela "produtos"
+        $existingProduct = DB::table('public.produto')->where('descricaocompleta', $name)->first();
+      
+        if ($existingProduct) {
+            // Atualizar as informações do produto
+            DB::table('public.produto')
+                ->where('id', $existingProduct->id)
+                ->update([
+                    'descricaocompleta' => $name,
+                    'descricaogondola' => $name,
+                    'descricaoreduzida' => substr($name, 0, 22),
+                    'dataalteracao' => date('Y-m-d H:i:s')
+                ]);
+
+            // Retornar o ID do produto atualizado
+            return $existingProduct->id;
+        } else {
+            // Buscar o último ID na tabela "produtos"
+            $lastProductId = DB::table('public.produto')->max('id');
+
+            // Incrementar o ID para o novo produto
+            $newProductId = $lastProductId + 1;
+       
+            // Inserir o novo produto com o ID incrementado
+           $result = DB::table('public.produto')->insert([
+                'id' => $newProductId,
+                'descricaocompleta' => $name,
+                'descricaogondola' => $name,
+                'descricaoreduzida' => substr($name, 0, 22),
+                'qtdembalagem' => 1,
+                'id_tipoembalagem' => 1,
+                'mercadologico1' => 1,
+                'mercadologico2' => 1,
+                'mercadologico3' => 1,
+                'mercadologico4' => 1,
+                'mercadologico5' => 0,
+                'id_comprador' => 1,
+                'custofinal' => 0,
+                'pesoliquido' => 0,
+                'datacadastro' => date('Y-m-d H:i:s'),
+                'validade' => 0,
+                'pesobruto' => 0,
+                'comprimentoembalagem' => 0,
+                'larguraembalagem' => 0,
+                'alturaembalagem' => 0,
+                'perda' => 0,
+                'verificacustotabela' => false,
+                'percentualipi' => 0,
+                'percentualfrete' => 0,
+                'percentualencargo' => 0,
+                'percentualperda' => 0,
+                'percentualsubstituicao' => 0,
+                'id_tipomercadoria' => 99,
+                'sugestaopedido' => true,
+                'aceitamultiplicacaopdv' => true,
+                'id_fornecedorfabricante' => 1,
+                'id_divisaofornecedor' => 0,
+                'id_tipopiscofins' => 1,
+                'sazonal' => false, 
+                'consignado' => false,
+                'ncm1' => 9999,
+                'ncm2' => 99,
+                'ncm3' => 99,
+                'ddv' => 0,
+                'permitetroca' => true,
+                'temperatura' => 0,
+                'id_tipoorigemmercadoria' => 0,
+                'ipi' => 0,
+                'pesavel' => false,
+                'id_tipopiscofinscredito' => 1,
+                'vendacontrolada' => false,
+                'vendapdv' => true,
+                'conferido' => false,
+                'permitequebra' => true, 
+                'permiteperda' => true,
+                'impostomedionacional' => 0,
+                'impostomedioimportado' => 0,
+                'sugestaocotacao' => true,
+                'tara' => 0, 
+                'utilizatabelasubstituicaotributaria' => false,
+                'id_tipolocaltroca' => 0,
+                'qtddiasminimovalidade' => 0,
+                'utilizavalidadeentrada' => 0,
+                'impostomedioestadual' => 0,
+                'id_tipocompra' => 1,
+                'numeroparcela' => 0,
+                'id_tipoembalagemvolume' => 0,
+                'volume' => 1,
+                'id_normacompra' => 1,
+                'promocaoauditada' => false,
+                'permitedescontopdv' => true,
+                'verificapesopdv' => false,
+                'produtoecommerce' => false,
+                'id_tipoorigemmercadoriaentrada' => 0, 
+                'alteradopaf' => false,
+            ]);
+            // Retornar o ID do novo produto inserido
+            return $newProductId;
+        }
+    }
+
+    // Função para inserir ou atualizar um produto na tabela "produtocomplemento"
+    function insertOrUpdateProductComplement($productId, $price)
+    {
+        $price = self::parsePrice($price);
+        // Verificar se o produto já existe na tabela "produtocomplemento"
+        $existingProductComplement = DB::table('public.produtocomplemento')->where('id_produto', $productId)->first();
+
+        if ($existingProductComplement) {
+            // Atualizar o preço do produto na tabela "produtocomplemento"
+            DB::table('public.produtocomplemento')
+                ->where('id_produto', $productId)
+                ->update(['precovenda' => $price]);
+        } else {
+            // Inserir o novo produto complemento na tabela "produtocomplemento"
+            DB::table('public.produtocomplemento')->insert([
+                'id_produto' => $productId,
+                'precovenda' => $price,
+                'prateleira' => '',
+                'secao'      => '',
+                'estoqueminimo' => 0,
+                'estoquemaximo' => 0,
+                'valoripi'      => 0, 
+                'custosemimposto' => 0,
+                'custocomimposto' => 0,
+                'custosemimpostoanterior' => 0,
+                'custocomimpostoanterior' => 0,
+                'precovendaanterior' => 0,
+                'precodiaseguinte' => 0,
+                'estoque' => 0,
+                'troca' => 0,
+                'emiteetiqueta' => 0,
+                'custosemperdasemimposto' => 0,
+                'custosemperdasemimpostoanterior' => 0,
+                'customediocomimposto' => 0,
+                'customediocomimposto' => 0,
+                'customediosemimposto' => 0,
+                'id_aliquotacredito' => 6,
+                'teclaassociada' => 0,
+                'id_situacaocadastro' => 1,
+                'id_loja' => 1,
+                'descontinuado' => false,
+                'quantidadeultimaentrada' => 0,
+                'centralizado' => false,
+                'operacional' => 0,
+                'valoricmssubstituicao' => 0, 
+                'cestabasica' => 0, 
+                'customediocomimpostoanterior' => 0,
+                'customediosemimpostoanterior' => 0,
+                'id_tipopiscofinscredito' => 1,
+                'valoroutrassubstituicao' => 0,
+                'id_tipocalculoddv' => 1,
+                'id_normareposicao' => 1,
+                'id_tipoproduto' => 0,
+                'fabricacaopropria' => false,
+                'dataprimeiraentrada' => date('Y-m-d'),
+                'alteradopaf' => false,
+                'margem' => 0,
+                'margemminima' => 0,
+                'margemmaxima' => 0
+            ]);
+        }
+    }
+    // Função para converter o preço no formato correto (R$ 0,79 -> 0.79)
+    function parsePrice($price)
+    {
+        $price = str_replace(['R$', ','], ['', '.'], $price);
+        return (float) $price;
+    }
+
 }
