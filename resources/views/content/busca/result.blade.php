@@ -27,7 +27,29 @@ if($type == 0) {
 }
 ?>
 
+<div class="loading">Loading&#8230;</div>
 @section('content')
+
+<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true" id="modal-confirm">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <meta name="csrf-token" content="{{ csrf_token() }}" />
+      <div class="modal-header">
+        <h4 class="modal-title" id="myModalLabel">Confirmar</h4>
+        <!-- <button type="button" style='background: transparent;border: none;font-size: 2em;color: #5663b8;' class="bx:x-circle" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button> -->
+      </div>
+      <div class='modal-body'>
+        <p>Realmente deseja atualizar <strong></strong> no banco de dados?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" id="modal-btn-no">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="modal-btn-si">Atualizar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <h4 class="fw-bold py-3 mb-4">
     <span class="text-muted fw-light"><a href="/busca-rapida" class="text-muted fw-light">Busca Rápida</a> / </span> <?=$siteTitle?>
 </h4>
@@ -42,8 +64,8 @@ foreach($resultado as $result) {
     if($result[0] == 'https://www.superpaguemenos.com.br') {
       $titleCategory = 'Página Inicial';
     }else{
-        $titleCategory = ucfirst($result[0]);
         $titleCategory = str_replace("-", " ", $result[0]);
+        $titleCategory = ucfirst($result[0]);
     }
   }else if($type == 1) {
     $titleCategory = ucwords($result['category']);
@@ -84,19 +106,19 @@ foreach($resultado as $result) {
           <?php if($options['buscarPrecoProduto']) { ?><th>Preço</th> <?php } ?>
           <?php if($options['precoAnterior']) { ?><th>Preço Anterior</th> <?php } ?>
           <?php if($options['buscarDescontoProduto']) { ?><th>Desconto</th> <?php } ?>
-          <?php if($options['buscarLinkProduto']) { ?><th style='width: 5em'>URL</th> <?php } ?>
+          <?php if($options['buscarLinkProduto']) { ?><th style='width: 30%'>URL</th> <?php } ?>
         </tr>
       </thead>
       <tbody class="table-border-bottom-0">
-        @foreach($result[1] as $resultValue)
+        @foreach($result[1] as $key => $resultValue)
         <?php 
         ?>
-        <tr>
-        <?php if($options['buscarNomeProduto']) { ?> <td><i class="fab fa-angular fa-lg text-danger me-3"></i> <strong><?=$resultValue['nome']?></strong></td><?php } ?>
-        <?php if($options['buscarPrecoProduto']) { ?> <td><?=$resultValue['preco']?></td><?php } ?>
+        <tr data-id='tr-<?=$key?>' class='tr-click <?php echo ($resultValue['exists']) ? $resultValue['exists'] : ''?>'> 
+        <?php if($options['buscarNomeProduto']) { ?> <td class='name'><i class="fab fa-angular fa-lg text-danger me-3"></i> <strong><?=$resultValue['nome']?></strong></td><?php } ?>
+        <?php if($options['buscarPrecoProduto']) { ?> <td class='price'><?=$resultValue['preco']?></td><?php } ?>
         <?php if($options['precoAnterior']) { ?> <td><?=$resultValue['precoAnterior']?></td><?php } ?>
         <?php if($options['buscarDescontoProduto'] != '') { ?> <td><?=$resultValue['desconto']?></td><?php } ?>
-        <?php if($options['buscarLinkProduto']) { ?> <td style='width: 5em'><?=$resultValue['link']?></td> <?php } ?>
+        <?php if($options['buscarLinkProduto']) { ?> <td ><?=$resultValue['link']?></td> <?php } ?>
         </tr>
         @endforeach
       </tbody>
@@ -120,17 +142,17 @@ foreach($resultado as $result) {
       <thead>
         <tr>
           <th style='width: 30px; padding-right: 0em;'>#</th>
-          <?php if($options['buscarNomeProduto']) { ?><th>Nome</th> <?php } ?>
+          <?php if($options['buscarNomeProduto']) { ?><th style='width: 27%'>Nome</th> <?php } ?>
           <?php if($options['buscarCategoriaProduto']) {?><th>Categoria</th><?php } ?>
           <?php if($options['buscarMarcaProduto']) {?><th>Marca</th><?php } ?>
-          <?php if($options['buscarLinkProduto']) { ?><th style='width: 5em'>URL</th> <?php } ?>
+          <?php if($options['buscarLinkProduto']) { ?><th style='width: 35%'>URL</th> <?php } ?>
         </tr>
       </thead>
       <tbody class="table-border-bottom-0">
         @foreach($result['results'] as $key => $resultValue)
         <?php 
         ?>
-        <tr data-target='<?=$key?>'>
+        <tr data-target='<?=$key?>' data-id='tr-<?=$key?>' class='tr-click <?php echo ($resultValue['exists']) ? $resultValue['exists'] : ''?>'>
         <td class='dt-control' data-id="<?=$key?>">
           <i class='bx bx-chevron-right-square'></i>
           <div class='box-detail' style='display: none'>
@@ -145,7 +167,7 @@ foreach($resultado as $result) {
               @foreach($resultValue['providers'] as $provider)
               <tr class='table-primary'>  
                 <td><?=$provider['name']?></td>
-                <td><?php echo 'R$ '. number_format($provider['prices'][0]['price'], 2, ',', '.')?></td>
+                <td class='price priceFirst'><?php echo 'R$ '. number_format($provider['prices'][0]['price'], 2, ',', '.')?></td>
                 <td><?=$provider['delivery_time_in_days']?> <?php echo ($provider['delivery_time_in_days']) > 1 ? ' dias' : ' dias'?></td>
                 <td><?=$provider['prices'][0]['stock_count']?></td>
               </tr>
@@ -153,7 +175,7 @@ foreach($resultado as $result) {
             </table>
           </div>
         </td>
-        <?php if($options['buscarNomeProduto']) { ?> <td><i class="fab fa-angular fa-lg text-danger me-3"></i> <strong><?=$resultValue['name']?></strong></td><?php } ?>
+        <?php if($options['buscarNomeProduto']) { ?> <td><i class="fab fa-angular fa-lg text-danger me-3"></i> <strong class='name'><?=$resultValue['name']?></strong></td><?php } ?>
         <?php if($options['buscarCategoriaProduto']) { ?><td></i><?=$resultValue['category']?></td><?php } ?>
         <?php if($options['buscarMarcaProduto']) { ?><td><?=$resultValue['brand']?></td><?php } ?>
         <?php if($options['buscarLinkProduto']) { ?> <td style='width: 5em'><?=$resultValue['slug']?></td> <?php } ?>
@@ -209,7 +231,7 @@ foreach($resultado as $result) {
         @foreach($result['results'] as $key => $resultValue)
         <?php 
         ?>
-        <tr data-id='tr-<?=$key?>' class='tr-click'>
+        <tr data-id='tr-<?=$key?>' class='tr-click <?php echo ($resultValue['exists']) ? $resultValue['exists'] : ''?>'>
         <?php if($options['buscarNomeProduto']) { ?> <td class='name'><i class="fab fa-angular fa-lg text-danger me-3"></i><strong><?=$resultValue['name']?></strong></td><?php } ?>
         <?php if($options['buscarPrecoProduto']) { ?><td class='price'></i><?php echo 'R$ '. number_format($resultValue['price'], 2, ',', '.')?></td><?php } ?>
         <?php if($options['buscarMarcaProduto']) { ?><td class='brand'><?php echo str_replace(" | null", "", $resultValue['brand'])?></td><?php } ?>
