@@ -164,10 +164,10 @@ class BuscaRapida extends Controller
                     }
                     
                     $exists = false;
-                    $existingProduct = DB::table('public.produto')->where('descricaocompleta', $nome)->first();
+                    $existingProduct = DB::table('produto')->where('descricaocompleta', $nome)->first();
                  
                     if($existingProduct) {
-                        $existingProductValue = DB::table('public.produtocomplemento')->where('id_produto', $existingProduct->id)->first();
+                        $existingProductValue = DB::table('produtocomplemento')->where('id_produto', $existingProduct->id)->first();
                         if(floatval($existingProductValue->precovenda) == self::parsePrice($preco)) {
                             $exists = 'table-primary';
                         }else{
@@ -267,10 +267,10 @@ class BuscaRapida extends Controller
 
                 foreach($array['results'] as $ckey => &$resultValue) {
                     $exists = false;
-                    $existingProduct = DB::table('public.produto')->where('descricaocompleta', $resultValue['name'])->first();
+                    $existingProduct = DB::table('produto')->where('descricaocompleta', $resultValue['name'])->first();
                  
                     if($existingProduct) {
-                        $existingProductValue = DB::table('public.produtocomplemento')->where('id_produto', $existingProduct->id)->first();
+                        $existingProductValue = DB::table('produtocomplemento')->where('id_produto', $existingProduct->id)->first();
                         if(floatval($existingProductValue->precovenda) == self::parsePrice($resultValue['providers'][0]['prices'][0]['price'])) {
                             $exists = 'table-primary';
                         }else{
@@ -339,9 +339,9 @@ class BuscaRapida extends Controller
                     unset($product['lojaConfigTO']);
                     unset($product['inventory']);
                     $product['exists'] = false;
-                    $existingProduct = DB::table('public.produto')->where('descricaocompleta', $product['name'])->first();
+                    $existingProduct = DB::table('produto')->where('descricaocompleta', $product['name'])->first();
                     if($existingProduct) {
-                        $existingProductValue = DB::table('public.produtocomplemento')->where('id_produto', $existingProduct->id)->first();
+                        $existingProductValue = DB::table('produtocomplemento')->where('id_produto', $existingProduct->id)->first();
                         if(floatval($existingProductValue->precovenda) == $product['price']) {
                             $product['exists'] = 'table-primary';
                         }else{
@@ -383,11 +383,11 @@ class BuscaRapida extends Controller
         $price = $product['price'];
 
         // Verificar se o produto já existe na tabela "produtos"
-        $existingProduct = DB::table('public.produto')->where('descricaocompleta', $name)->first();
+        $existingProduct = DB::table('produto')->where('descricaocompleta', $name)->first();
       
         if ($existingProduct) {
             // Atualizar as informações do produto
-            DB::table('public.produto')
+            DB::table('produto')
                 ->where('id', $existingProduct->id)
                 ->update([
                     'descricaocompleta' => $name,
@@ -400,13 +400,13 @@ class BuscaRapida extends Controller
             return $existingProduct->id;
         } else {
             // Buscar o último ID na tabela "produtos"
-            $lastProductId = DB::table('public.produto')->max('id');
+            $lastProductId = DB::table('produto')->max('id');
 
             // Incrementar o ID para o novo produto
             $newProductId = $lastProductId + 1;
        
             // Inserir o novo produto com o ID incrementado
-           $result = DB::table('public.produto')->insert([
+           $result = DB::table('produto')->insert([
                 'id' => $newProductId,
                 'descricaocompleta' => $name,
                 'descricaogondola' => $name,
@@ -488,16 +488,16 @@ class BuscaRapida extends Controller
     {
         $price = self::parsePrice($price);
         // Verificar se o produto já existe na tabela "produtocomplemento"
-        $existingProductComplement = DB::table('public.produtocomplemento')->where('id_produto', $productId)->first();
+        $existingProductComplement = DB::table('produtocomplemento')->where('id_produto', $productId)->first();
 
         if ($existingProductComplement) {
             // Atualizar o preço do produto na tabela "produtocomplemento"
-            DB::table('public.produtocomplemento')
+            DB::table('produtocomplemento')
                 ->where('id_produto', $productId)
                 ->update(['precovenda' => $price]);
         } else {
             // Inserir o novo produto complemento na tabela "produtocomplemento"
-            DB::table('public.produtocomplemento')->insert([
+            DB::table('produtocomplemento')->insert([
                 'id_produto' => $productId,
                 'precovenda' => $price,
                 'prateleira' => '',
